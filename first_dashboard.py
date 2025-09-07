@@ -92,13 +92,11 @@ if page == 'Clean Data':
             pass
         with sa2:
             if st.button("💾 Save Changes"):
-    
                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                 saved_filename = f"Titanic-Cleaned-{timestamp}.csv"
                 st.session_state.df.to_csv(saved_filename, index=False)
                 st.session_state["saved_df"] = st.session_state.df.copy()
                 st.success(f"✅ Changes saved successfully as '{saved_filename}'!")
-
         with sa3:
             pass
 
@@ -118,6 +116,13 @@ elif page == "Dashboard":
 
     df = df_raw.copy()
 
+    # 🔹 تصحيح العمود Sex
+    if "Sex" in df.columns:
+        if df["Sex"].dtype in [np.int64, np.float64]:
+            df["Sex"] = df["Sex"].map({0: "male", 1: "female"})
+        else:
+            df["Sex"] = df["Sex"].astype(str).str.lower()
+
     st.title("🚢 Titanic Dashboard")
     st.markdown("### Filters")
 
@@ -134,9 +139,7 @@ elif page == "Dashboard":
     # فلتر الجنس
     with f2:
         if "Sex" in df.columns:
-            if df["Sex"].dtype in [np.int64, np.float64]:
-                df["Sex"] = df["Sex"].map({0: "Female", 1: "Male"})
-            sexes = ["Male", "Female"]
+            sexes = ["male", "female"]
             sex_sel = st.multiselect("Sex", options=sexes, default=sexes)
             if sex_sel:
                 df = df[df["Sex"].isin(sex_sel)]
@@ -213,7 +216,7 @@ elif page == "Dashboard":
             .encode(
                 y=alt.Y("Sex:N", title="Sex"),
                 x=alt.X("Survival Rate (%):Q", title="Survival Rate (%)"),
-                color=alt.Color("Sex:N", scale=alt.Scale(domain=["Male","Female"], range=["#1f77b4","#ff69b4"])),
+                color=alt.Color("Sex:N", scale=alt.Scale(domain=["male","female"], range=["#1f77b4","#ff69b4"])),
                 tooltip=["Sex","Survival Rate (%)"]
             )
             .properties(height=350)
@@ -228,7 +231,7 @@ elif page == "Dashboard":
         age_binned = pd.cut(df["Age"], bins=bins, include_lowest=True)
         surv_by_agebin = df.groupby(age_binned)["Survived"].mean().reset_index()
         surv_by_agebin["Survival Rate (%)"] = (surv_by_agebin["Survived"] * 100).round(2)
-        surv_by_agebin["Age Band"] = surv_by_agebin["Age"].astype(str)
+        surv_by_agebin.rename(columns={"Age": "Age Band"}, inplace=True)
 
         line_age = (
             alt.Chart(surv_by_agebin, title="Survival Rate across Age Bands")
